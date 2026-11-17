@@ -12,8 +12,9 @@
 | STT | Họ tên | MSSV | Email | GitHub | Vai trò |
 | --: | ------ | ---- | ----- | ------ | ------- |
 |   1 |        |      |       |        |         |
-|   2 |        |      |       |        |         |
-|   3 | Nguyễn Minh Đức | 2A202603751 | nmduc7904@gmail.com | Minhduc7904 | Orchestrator + Handoff (P3) |
+|   2 | Phùng Văn Thanh Cao | 2A202603741 | ptc99998888@gmail.com | ththanh8888 | B: single agent + policy |
+|   3 | Vũ Quang Huy | 2A202603782 | 26ai.huyvq6@vinuni.edu.vn | huyvu-03 | Workflow + integration |
+|   4 | Nguyễn Minh Đức | 2A202603751 | nmduc7904@gmail.com | Minhduc7904 | Orchestrator + Handoff (P3) |
 
 Gợi ý chia vai:
 
@@ -26,6 +27,7 @@ Gợi ý chia vai:
 
 | Người | Vai | Commit | Test đã thêm hoặc sửa |
 | --- | --- | --- | --- |
+| Phùng Văn Thanh Cao | B: single agent + policy | `41f491f` (single.py: ReAct, quote đầy đủ, crash_at; test approval) | `src/tests/test_single_approval.py` (36 test approval) |
 | | | | |
 | Nguyễn Minh Đức (2A202603751) | Orchestrator + Handoff | `cbe652f` feat(orchestrator): shape C, read-only investigators, sanitized handoff | `src/tests/test_orchestrator_handoff.py` (mới); ma trận student `-k orchestrator` 62/62 |
 
