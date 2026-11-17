@@ -27,9 +27,9 @@ Phần này nối tiếp phần mini research ở buổi lý thuyết (slide 62�
 
 ## Kết quả ablation
 
-- Lệnh đã chạy (copy nguyên văn): <<ĐIỀN sau khi D chạy benchmark, lệnh gợi ý: `python -m lab8.benchmark --shapes workflow,single,orchestrator,swarm --cases data/public_claims.jsonl --seeds 11,22,33,44,55 --out reports/benchmark.json`>>
-- Run id / file report: <<ĐIỀN, `src/reports/benchmark.json`>>
-- Kết quả so với hypothesis (đúng / sai / không kết luận được), kèm số liệu: <<ĐIỀN từ benchmark.json, không chép tay từ terminal>>
+- Lệnh đã chạy: `python -m lab8.benchmark --shapes workflow,single,orchestrator,swarm --cases data/public_claims.jsonl --seeds 11,22,33,44,55 --out reports/benchmark.json`
+- Run id / file report: `R-swarm-C-002-s55` (swarm trả `resolved`, trong khi đáp án là `denied`) và `R-single-C-002-s11`, `R-single-C-002-s22`, `R-single-C-002-s33`, `R-single-C-002-s44`, `R-single-C-002-s55` (single đều trả `denied`); kết quả tổng hợp tại `src/reports/benchmark.json`.
+- Kết quả so với hypothesis: **đúng trên claim T02**. Single đạt 5/5 seed (pass rate 1.000); swarm đạt 4/5 (0.800) và sai ở seed 55 vì trả `resolved`. Trên toàn bộ 14 claim × 5 seed, single đạt 70/70 (pass rate 1.000, pass^5 1.000, variance 0); swarm đạt 69/70 (pass rate 0.986, pass^5 0.929, variance 0.000816). Kết quả phù hợp với nhận định rằng trial swarm seed 55 có lỗi kiểm chứng thông tin trong ticket. Đây là so sánh hai shape với nhiều khác biệt cùng lúc, nên không kết luận riêng tác động nhân quả của topology.
 - Giới hạn: MockLLM không phải model sản xuất, latency là `unavailable`.
 
 Muốn đi xa hơn một ablation để lấy điểm cộng thì xem [docs/bonus_topics.md](../../docs/bonus_topics.md).

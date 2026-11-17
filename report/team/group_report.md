@@ -64,12 +64,12 @@ Nhóm ưu tiên phân tách rõ trách nhiệm giữa model và code: model hỗ
 
 *Phần của thành viên B. Các mục 3.1 (workflow) và 3.3 (orchestrator) do A và C viết.*
 
-- **Luồng:** đọc claim bằng `get_claim_view`; thiếu `order_id` thì trả `needs_info`. Sau đó vòng ReAct (tối đa 8 bước) chạy tuần tự `lookup_order` → `compute_compensation` → `lookup_refund_history`, rồi trả quote. Một claim thường dùng 4 bước tool và 4 lần `decide`, thấp hơn trần 8.
-- **Ranh giới code / model:** model (MockLLM) chỉ chọn tool đọc và soạn câu trả lời. Số tiền do `compute_compensation` tính. Sau vòng lặp, code của shape gọi `durability.issue_refund`. Shape không tự trừ phần đã hoàn: nó truyền **quote đầy đủ** và để host trừ, nên T13 (đã hoàn đủ) và T14 (hoàn phần chênh) đúng.
+- **Luồng:** đọc claim bằng `get_claim_view`; `order_id` rỗng hoặc toàn khoảng trắng thì trả `needs_info`. Sau đó vòng ReAct (tối đa 8 bước) chạy tuần tự `lookup_order` → `compute_compensation` → `lookup_refund_history`, rồi trả quote. Một claim thường dùng 3 tool trong vòng lặp và 4 lần `decide`, thấp hơn trần 8.
+- **Ranh giới code / model:** `decide()` là kịch bản cố định trong code, không phải model tự chọn tool. MockLLM được gọi mỗi bước chỉ để tính chi phí mô phỏng và soạn câu trả lời; kết quả của nó không ảnh hưởng tới tool hay số tiền. Shape B vì vậy gần với workflow chạy trong khung ReAct. Số tiền do `compute_compensation` tính. Sau vòng lặp, code của shape gọi `durability.issue_refund`. Shape không tự trừ phần đã hoàn: nó truyền **quote đầy đủ** và để host trừ, nên T13 (đã hoàn đủ) và T14 (hoàn phần chênh) đúng.
 - **Ticket là dữ liệu:** ticket không được đưa vào observation của vòng ReAct và không ghi vào trace, nên shape không tin số ngày trễ ghi trong ticket (điểm yếu của swarm ở seed 55, claim T02).
 - **Crash:** `crash_at` được truyền vào `issue_refund`, `InjectedCrash` chỉ được flush trace rồi ném lại.
 - **Trace:** ghi kết quả `lookup_order` (đã qua allowlist), quote, kết quả `lookup_refund_history`, quyết định và lý do host từ chối. **Cố ý không ghi** ticket, claim row, order row thô, `parent_secret`, header.
-- **Test approval:** 36 test trong `src/tests/test_single_approval.py`, chạy 5 seed, phủ các nhánh: không có approval, approval không tồn tại, hết hạn, bị thu hồi, của claim khác, số tiền ≤ 0, approval thấp hơn quote, gọi lại sau khi bị từ chối.
+- **Test approval:** 12 test trong `src/tests/test_single_approval.py`, phủ các nhánh: không có approval, approval không tồn tại, hết hạn, bị thu hồi, của claim khác, số tiền ≤ 0, approval thấp hơn quote, gọi lại sau khi bị từ chối, `order_id` rỗng hoặc toàn khoảng trắng; thêm một test kiểm kết quả không đổi trên 5 seed.
 - **Số đo tham khảo (một lần chạy lẻ, C-001 seed 11):** single 5 model call, 4 tool call, 42,58 VND; swarm 3 model call, 5 tool call, 52,30 VND. Số chính thức xem mục 4.
 
 ### 3.3 Shape C — orchestrator + handoff
