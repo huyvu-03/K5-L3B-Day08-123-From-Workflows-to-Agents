@@ -41,6 +41,9 @@ def test_handoff_in_trace_is_allowlisted_and_read_only(public_db):
     assert set(handoff["allowed_tools"]) <= READONLY_TOOLS
     assert "issue_refund" not in handoff["allowed_tools"]
     assert "parent_secret" not in handoff
+    # Nothing from the claim or ticket is forwarded: facts stay empty, so no value can leak through them.
+    assert handoff["facts"] == {}
+    assert BY_ID["C-010"]["ticket"] not in json.dumps(handoff, ensure_ascii=False)
 
 
 @pytest.mark.parametrize("claim_id", ALL_CLAIM_IDS)
@@ -51,6 +54,10 @@ def test_trace_never_carries_secret_pii_or_ticket(public_db, claim_id):
     # Every token the public matrix forbids (secrets, phone, address, item, internal note).
     for token in BY_ID[claim_id]["expected"]["forbid_substrings"]:
         assert token not in raw, token
+    # The ticket is user text. It must not appear under any key, not just a key named "ticket".
+    ticket = BY_ID[claim_id]["ticket"]
+    assert ticket not in raw
+    assert json.dumps(ticket, ensure_ascii=False).strip('"') not in raw
     assert "CANARY_SECRET_" not in raw
     assert "parent_secret" not in raw
     assert '"ticket"' not in raw
@@ -103,3 +110,58 @@ def test_crash_is_not_swallowed_and_resume_pays_once(public_db, tmp_path, monkey
     assert resumed.status == "resolved"
     assert _ledger_rows(public_db, "C-012") == 1
     assert resumed.committed_audit_count == 1
+
+
+def _store_with_order_id(tmp_path, order_id):
+    """Public world, but C-001 points at `order_id` instead of its real order."""
+    from lab8.db import init_store
+    from tests.conftest import WORLD
+
+    claims = [dict(row) for row in CLAIMS]
+    for row in claims:
+        if row["claim_id"] == "C-001":
+            row["order_id"] = order_id
+    path = tmp_path / "custom.sqlite"
+    init_store(path, WORLD, claims).close()
+    return path
+
+
+@pytest.mark.parametrize(
+    ("order_id", "status"),
+    [
+        ("   ", "needs_info"),  # blank means missing
+        ("\t\n", "needs_info"),
+        ("O-107 ", "escalated"),  # padded id: host matches exactly, so "not found"
+        (" O-107", "escalated"),
+        ("\u041e-107", "escalated"),  # Cyrillic O look-alike
+        ("o-107", "escalated"),
+    ],
+)
+def test_blank_vs_padded_order_id_decision(tmp_path, order_id, status):
+    store = _store_with_order_id(tmp_path, order_id)
+    result = run_claim("C-001", seed=11, store_path=str(store))
+    assert result.status == status
+    assert result.proposal_amount == 0
+    assert _ledger_rows(store, "C-001") == 0
+
+
+def test_unexpected_error_becomes_failed_not_exception(public_db, monkeypatch):
+    started = time.time()
+
+    def boom(**_kwargs):
+        raise RuntimeError("investigator crashed")
+
+    monkeypatch.setattr("lab8.shapes.orchestrator.make_handoff", boom)
+    result = run_claim("C-001", seed=11, store_path=str(public_db))
+    assert result.status == "failed"
+    assert result.error_reason == "RuntimeError"
+    assert _ledger_rows(public_db, "C-001") == 0
+    assert check_trace(result.as_dict(), started_at=started) == (True, "ok")
+
+
+def test_not_found_order_id_is_not_written_to_trace(tmp_path):
+    marker = "O-NOT-A-REAL-ORDER-777"
+    store = _store_with_order_id(tmp_path, marker)
+    result = run_claim("C-001", seed=11, store_path=str(store))
+    assert result.status == "escalated"
+    assert marker not in open(result.trace_path, encoding="utf-8").read()
