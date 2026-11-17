@@ -7,7 +7,7 @@
 - **Repo nhóm:** K5-L3B-Day08-123-From-Workflows-to-Agents
 - **URL repo:** https://github.com/huyvu-03/K5-L3B-Day08-123-From-Workflows-to-Agents
 - **Nhánh nộp:** main
-- **Commit chốt:** [Bổ sung commit hash]
+- **Commit chốt:** `78f888f`
 
 ## Thành viên
 
