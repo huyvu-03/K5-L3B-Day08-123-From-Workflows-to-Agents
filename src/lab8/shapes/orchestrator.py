@@ -18,8 +18,22 @@ ones. `lab8.trace.Trace` does this; your own tracer is fine if it matches.
 
 from __future__ import annotations
 
-from lab8.schemas import RunResult
-from lab8.shapes.common import not_implemented
+import sqlite3
+
+from lab8.db import connect
+from lab8.durability import InjectedCrash, issue_refund
+from lab8.handoff import make_handoff
+from lab8.mock_llm import complete
+from lab8.runtime import run_readonly_investigators
+from lab8.schemas import Budget, RunResult, make_run_id
+from lab8.shapes.common import finish, safe_dump
+from lab8.tools import get_claim_view, tool_cost
+from lab8.trace import Trace
+
+SHAPE = "orchestrator"
+# Investigators are read-only. No issue_refund / append_audit: make_handoff rejects them.
+# compute_compensation reads the current policy itself, so lookup_policy would be a wasted tool call.
+INVESTIGATOR_TOOLS = ["lookup_order", "compute_compensation"]
 
 
 def run_claim(
@@ -29,7 +43,88 @@ def run_claim(
     store_path: str,
     crash_at: str | None = None,
 ) -> RunResult:
-    # TODO CP2 (student): thay stub này bằng shape orchestrator theo các bước ở docstring đầu file.
-    # TODO CP3 (student): truyền crash_at vào durability.issue_refund, không bắt InjectedCrash.
-    del store_path, crash_at
-    return not_implemented("orchestrator", claim_id, seed)
+    conn = connect(store_path)
+    try:
+        return _run(conn, claim_id, seed=seed, crash_at=crash_at)
+    finally:
+        conn.close()
+
+
+def _end(conn, claim_id, seed, status, amount, budget, trace, reason=None) -> RunResult:
+    return finish(
+        conn,
+        shape=SHAPE,
+        claim_id=claim_id,
+        seed=seed,
+        status=status,
+        proposal_amount=amount,
+        budget=budget,
+        trace=trace,
+        error_reason=reason,
+    )
+
+
+def _run(conn: sqlite3.Connection, claim_id: str, *, seed: int, crash_at: str | None) -> RunResult:
+    budget = Budget()
+    trace = Trace(make_run_id(SHAPE, claim_id, seed))
+
+    # 1. Orchestrator reads the claim through the allowlisted view. The ticket is user
+    #    data: it is never parsed for numbers or order ids, and never written to the trace.
+    claim = get_claim_view(conn, claim_id)
+    budget.add_tool(tool_cost())
+    if not claim.get("found"):
+        trace.add("error", {"reason": "unknown_claim"})
+        return _end(conn, claim_id, seed, "failed", 0, budget, trace, "unknown_claim")
+
+    # Blank means missing (needs_info). A non-blank id is looked up exactly as stored: the host
+    # matches order ids exactly too, so a padded or look-alike id is "not found" (escalated).
+    order_id = (claim.get("order_id") or "").strip()
+    trace.add("claim", {"claim_id": claim_id, "has_order_id": bool(order_id)})
+    if not order_id:
+        complete(budget, seed=seed, purpose="draft", prompt="needs_info")
+        trace.add("decision", {"status": "needs_info"})
+        return _end(conn, claim_id, seed, "needs_info", 0, budget, trace, "missing_order_id")
+
+    # 2. Plan, then delegate. The handoff carries only allowlisted fields; the parent
+    #    context (claim row, ticket text, secrets) is not forwarded or traced.
+    complete(budget, seed=seed, purpose="plan", prompt=f"delegate:{claim_id}")
+    handoff = make_handoff(
+        request_id=f"REQ-{claim_id}",
+        claim_id=claim_id,
+        task="check_applicable_policy",
+        facts={},
+        allowed_tools=INVESTIGATOR_TOOLS,
+    )
+    trace.add("handoff", safe_dump(handoff))
+
+    investigated = run_readonly_investigators(conn, budget, handoff, principal_id=claim["principal_id"])
+    order_view = investigated["tools"].get("lookup_order", {})
+    trace.add("investigator", {"lookup_order": order_view})
+
+    if not order_view.get("visible"):
+        complete(budget, seed=seed, purpose="draft", prompt="escalated")
+        trace.add("decision", {"status": "escalated", "reason": order_view.get("reason")})
+        return _end(conn, claim_id, seed, "escalated", 0, budget, trace, order_view.get("reason"))
+
+    # 3. Money comes from the investigator's compute_compensation over the DB order row.
+    quote_payload = investigated["tools"].get("compute_compensation") or {}
+    proposal = int(quote_payload.get("amount_vnd", 0))
+    trace.add("quote", safe_dump(quote_payload))
+    complete(budget, seed=seed, purpose="draft", prompt=f"proposal={proposal}")
+
+    if proposal <= 0:
+        return _end(conn, claim_id, seed, "denied", 0, budget, trace, quote_payload.get("reason"))
+
+    # 4. Only the orchestrator writes, through the host gate, with the FULL quote.
+    try:
+        outcome = issue_refund(conn, claim_id, proposal, crash_at=crash_at)
+    except InjectedCrash:
+        trace.add("crash", {"at": crash_at})
+        trace.write()
+        raise
+
+    trace.add("host", {"ok": outcome["ok"], "reason": outcome["reason"], "conflict": outcome["conflict"]})
+    if not outcome["ok"]:
+        status = "failed" if outcome["conflict"] else "denied"
+        return _end(conn, claim_id, seed, status, proposal, budget, trace, outcome["reason"])
+    return _end(conn, claim_id, seed, "resolved", proposal, budget, trace, None)
