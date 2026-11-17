@@ -44,8 +44,16 @@ def run_claim(
     crash_at: str | None = None,
 ) -> RunResult:
     conn = connect(store_path)
+    budget = Budget()
+    trace = Trace(make_run_id(SHAPE, claim_id, seed))
     try:
-        return _run(conn, claim_id, seed=seed, crash_at=crash_at)
+        return _run(conn, claim_id, seed=seed, crash_at=crash_at, budget=budget, trace=trace)
+    except InjectedCrash:
+        raise  # the crash is the point of T12: never swallow it
+    except Exception as exc:
+        # run_claim must not throw (docs/contracts.md): report a failed trial with a clean trace.
+        trace.add("error", {"reason": type(exc).__name__})
+        return _end(conn, claim_id, seed, "failed", 0, budget, trace, type(exc).__name__)
     finally:
         conn.close()
 
@@ -64,10 +72,15 @@ def _end(conn, claim_id, seed, status, amount, budget, trace, reason=None) -> Ru
     )
 
 
-def _run(conn: sqlite3.Connection, claim_id: str, *, seed: int, crash_at: str | None) -> RunResult:
-    budget = Budget()
-    trace = Trace(make_run_id(SHAPE, claim_id, seed))
-
+def _run(
+    conn: sqlite3.Connection,
+    claim_id: str,
+    *,
+    seed: int,
+    crash_at: str | None,
+    budget: Budget,
+    trace: Trace,
+) -> RunResult:
     # 1. Orchestrator reads the claim through the allowlisted view. The ticket is user
     #    data: it is never parsed for numbers or order ids, and never written to the trace.
     claim = get_claim_view(conn, claim_id)
@@ -99,7 +112,9 @@ def _run(conn: sqlite3.Connection, claim_id: str, *, seed: int, crash_at: str | 
 
     investigated = run_readonly_investigators(conn, budget, handoff, principal_id=claim["principal_id"])
     order_view = investigated["tools"].get("lookup_order", {})
-    trace.add("investigator", {"lookup_order": order_view})
+    # When the order is not visible, log only the verdict: the looked-up id is user-controlled text.
+    seen = order_view if order_view.get("visible") else {"visible": False, "reason": order_view.get("reason")}
+    trace.add("investigator", {"lookup_order": seen})
 
     if not order_view.get("visible"):
         complete(budget, seed=seed, purpose="draft", prompt="escalated")
