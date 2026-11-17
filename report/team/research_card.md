@@ -18,18 +18,18 @@ Phần này nối tiếp phần mini research ở buổi lý thuyết (slide 62�
 | Field | Hướng dẫn | Nhóm điền |
 | --- | --- | --- |
 | CÂU | R1 / R2 / R3 / R4 | R2 · Failure taxonomy |
-| SOURCE | Paper/blog, năm, URL, loại bằng chứng (benchmark, production report, blog kinh nghiệm) | MAST, NeurIPS 2025, *Why Do Multi-Agent LLM Systems Fail?*. Cemri, Pan và cộng sự (UC Berkeley), arXiv:2503.13657, URL: https://arxiv.org/abs/2503.13657. Loại bằng chứng: nghiên cứu thực nghiệm (benchmark/dataset) phân loại lỗi trên trace của các hệ multi-agent |
-| CLAIM | Một kết luận gốc của nguồn. Không viết rộng hơn phạm vi paper | MAST là bảng phân loại gồm 14 failure mode, gom vào 3 nhóm: lỗi thiết kế hệ thống (system design), lệch phối hợp giữa các agent (inter-agent misalignment) và lỗi kiểm chứng task (task verification) |
-| BOUNDARY | Model / dataset / setup giới hạn kết luận đó | Taxonomy được xây từ phân tích 7 framework multi-agent phổ biến trên hơn 200 task, do chuyên gia gán nhãn (Cohen's kappa 0,88); bộ dữ liệu MAST-Data công bố hơn 1.600 trace đã gắn nhãn (bản v3). Kết luận chỉ áp dụng cho các framework và task đó, không chứng minh gì về MockLLM hay bộ claim LogiX-VN |
+| SOURCE | Paper/blog, năm, URL, loại bằng chứng (benchmark, production report, blog kinh nghiệm) | MAST, NeurIPS 2025, *Why Do Multi-Agent LLM Systems Fail?*. URL: <<ĐIỀN, lấy từ thư viện tham khảo slide 68–69>>. Loại bằng chứng: nghiên cứu thực nghiệm phân loại lỗi trên trace của các hệ multi-agent |
+| CLAIM | Một kết luận gốc của nguồn. Không viết rộng hơn phạm vi paper | Lỗi của hệ multi-agent có thể gom thành các nhóm như lỗi đặc tả, lệch phối hợp giữa các agent, và lỗi kiểm chứng/kết thúc. <<Kiểm lại câu chữ với bài gốc trước khi nộp>> |
+| BOUNDARY | Model / dataset / setup giới hạn kết luận đó | Kết luận của paper dựa trên các framework và task mà paper khảo sát. Nó không chứng minh gì về MockLLM hay bộ claim LogiX-VN. <<Điền tên framework/số trace theo bài gốc>> |
 | HYPOTHESIS | Nếu đổi shape A→B (hoặc bật/tắt một thành phần), metric X sẽ đổi theo hướng nào, khoảng bao nhiêu | Trial fail của swarm ở seed 55 (T02) thuộc nhóm **lỗi kiểm chứng**: swarm tin số ngày trong ticket thay vì cột `delay_days` của đơn. Nếu đổi swarm → single (single chỉ đọc `delay_days` từ host), pass rate trên T02 tăng từ 4/5 lên 5/5 seed, và variance giữa các seed về 0 trên claim này |
 | METHOD | Biến giữ cố định: model, tools, seed, corpus, giá, evaluator. Biến duy nhất được thay đổi: … | Giữ cố định: MockLLM, tool đọc, seed `11,22,33,44,55`, corpus `data/public_claims.jsonl`, bảng giá `pricing.yaml`, grader. Biến duy nhất thay đổi: shape (swarm → single). Lưu ý: hai shape khác nhau ở cả topology lẫn nguồn của số ngày trễ, nên kết luận chỉ là "swarm ở seed 55 fail do kiểm chứng", không phải "single tốt hơn vì topology" |
 | FAILURE / METRIC | Một lỗi dự kiến và cách đo nó: pass rate, pass^5, variance, cost/success, leak, bypass | Lỗi dự kiến: swarm trả 20.000 VND cho T02 ở seed 55 (lẽ ra `denied`). Đo bằng pass rate và pass^5 theo claim, seed min–max, variance; nguyên nhân đối chiếu qua event `model_override` trong trace của swarm |
 
 ## Kết quả ablation
 
-- Lệnh đã chạy (copy nguyên văn): <<ĐIỀN sau khi D chạy benchmark, lệnh gợi ý: `python -m lab8.benchmark --shapes workflow,single,orchestrator,swarm --cases data/public_claims.jsonl --seeds 11,22,33,44,55 --out reports/benchmark.json`>>
-- Run id / file report: <<ĐIỀN, `src/reports/benchmark.json`>>
-- Kết quả so với hypothesis (đúng / sai / không kết luận được), kèm số liệu: <<ĐIỀN từ benchmark.json, không chép tay từ terminal>>
+- Lệnh đã chạy (copy nguyên văn): `python -m lab8.benchmark --shapes workflow,single,orchestrator,swarm --cases data/public_claims.jsonl --seeds 11,22,33,44,55 --out reports/benchmark.json`
+- Run id / file report: `src/reports/benchmark.json` (14 claim × 5 seed × 4 shape = 280 trial). Trial dẫn chứng: `R-swarm-C-002-s55` (fail, `status resolved != denied`) so với `R-single-C-002-s55` (pass, `denied`).
+- Kết quả so với hypothesis (đúng / sai / không kết luận được), kèm số liệu: **Đúng.** Trên T02 (C-002), swarm pass 4/5 seed: seed 11–44 ra `denied` đúng, seed 55 ra `resolved` (trả tiền khi lẽ ra từ chối). Single pass 5/5 seed, cả 5 đều `denied`. Toàn bộ corpus: swarm pass rate 0.986 (69/70), pass^5 0.929, seed min–max 0.929–1.000, variance 0.00082, cost/success 49.57 VND; single pass rate 1.000 (70/70), pass^5 1.000, seed min–max 1.000–1.000, variance 0, cost/success 36.58 VND. Lỗi duy nhất của swarm nằm ở seed 55, khớp với nhóm **task verification** của MAST: swarm không kiểm số ngày trễ trong ticket với cột `delay_days` của đơn. Giới hạn của kết luận: lỗi này được cài sẵn trong `swarm_reference.py` (khối `REFERENCE_WEAKNESS`), nên ablation chỉ xác nhận cách đo bắt được lỗi kiểm chứng, không chứng minh topology swarm nói chung kém hơn.
 - Giới hạn: MockLLM không phải model sản xuất, latency là `unavailable`.
 
-Muốn đi xa hơn một ablation để lấy điểm cộng thì xem [docs/bonus_topics.md](../../docs/bonus_topics.md).
+
