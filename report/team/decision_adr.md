@@ -57,13 +57,14 @@ Số event khớp với cột `steps` trong benchmark: claim được trả ti�
 
 Trace chỉ ghi các field đã qua allowlist của host (kết quả `get_claim_view`, `lookup_order`, `compute_compensation`). `principal_id` và `order_id` là định danh cần để đối chiếu trace với ledger, không phải dữ liệu cá nhân. Field cố ý không ghi: `parent_secret`, header, số điện thoại, địa chỉ, ghi chú nội bộ, tên hàng, nội dung ticket, và nguyên claim row hay order row.
 
-Bằng chứng: `src/tests/test_ledger_extra.py` quét trace và mọi file `<run_id>*` cùng thư mục trên 4 shape × 14 claim public, tìm `CANARY_SECRET_`, `parent_secret` và mọi chuỗi trong `forbid_substrings`, rồi gọi `check_trace`. Cả 56 ca đều pass. File test còn kiểm conflict số tiền, T13 (denied, không ghi ledger, audit `order_already_refunded`), T14 (proposal 150000, ledger 120000) và replay một dòng ledger trên cả 4 shape. Nhóm không ghi file nào ngoài `trace_path` và không in dữ liệu claim ra stdout.
+Bằng chứng: `src/tests/test_ledger_extra.py` quét trace và mọi file `<run_id>*` cùng thư mục trên 4 shape × 14 claim public, tìm `CANARY_SECRET_`, `parent_secret` và mọi chuỗi trong `forbid_substrings`, rồi gọi `check_trace`. Cả 56 ca đều pass (toàn file có 70 test). File test còn kiểm conflict số tiền, T13 (denied, không ghi ledger, audit `order_already_refunded`), T14 (proposal 150000, ledger 120000) và replay một dòng ledger trên cả 4 shape. Nhóm không ghi file nào ngoài `trace_path` và không in dữ liệu claim ra stdout.
 
 ## Giới hạn
 
 - MockLLM không phải model sản xuất. Nó cố định theo seed nên variance 0 ở đây không đảm bảo variance 0 với model thật. Workflow không gọi model nên không bị ảnh hưởng, nhưng so sánh với single và orchestrator thì có.
+- Single và orchestrator dùng `decide()` và luồng handoff cố định; MockLLM không quyết định tool hay số tiền. Vì vậy pass rate 1.000 và variance 0 là do thiết kế, không chứng minh độ bền với model thật, và so sánh chi phí giữa các shape chỉ có giá trị trong thiết lập mô phỏng này.
 - Latency để `unavailable`. Cost là giá mô phỏng (`simulated_not_real_api_price`), không phải giá API thật.
 - Kết luận chỉ có giá trị trong phạm vi 14 claim public và bộ student_drop nhóm đã tự kiểm.
-- Order_id toàn khoảng trắng: tại commit này workflow kiểm `not claim.get("order_id")`, nên chuỗi `"   "` đi tiếp và ra `escalated`, còn orchestrator ra `needs_info`. Không shape nào ghi ledger cho ca này. Test `test_blank_order_id_gets_same_status_on_all_team_shapes` đang để `xfail(strict=True)` chờ sửa. Không claim public nào có order_id như vậy nên số benchmark ở trên không đổi.
+- Order_id rỗng hoặc toàn khoảng trắng: workflow, single và orchestrator đều trả `needs_info` và không ghi ledger (sửa ở `f242fa4`, `01e8c48`, `87bf9ca`). Test `test_blank_order_id_gets_same_status_on_all_team_shapes` đã bỏ `xfail` và pass. Không claim public nào có order_id như vậy nên số benchmark ở trên không đổi.
 - Kết quả của host (`ok`, `reason`, `conflict`) không được ghi thành event riêng trong trace workflow. Status cuối và `error_reason` nằm trong `RunResult`.
 - Mọi số trong file này lấy từ `src/reports/benchmark.json` và `src/reports/crash.json`, không sửa tay JSON cho đủ ngưỡng 0.75.
