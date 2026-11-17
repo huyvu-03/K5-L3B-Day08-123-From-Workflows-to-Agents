@@ -25,7 +25,7 @@ Gợi ý chia vai:
 
 | Người | Vai | Commit | Test đã thêm hoặc sửa |
 | --- | --- | --- | --- |
-| | | | |
+| Vũ Quang Huy (2A202603782) | Workflow + integration | `1723d3e` (workflow), `f242fa4` (blank order ID fix) | `tests/test_public_matrix.py` — đã chạy các kiểm thử workflow; không thêm hoặc sửa file kiểm thử |
 
 ## Cá nhân
 
