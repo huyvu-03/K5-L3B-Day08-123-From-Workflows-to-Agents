@@ -45,7 +45,7 @@ Vai **B — Single agent + Policy**:
 
 ## 4. Bằng chứng
 
-- Commit: `41f491f` trên nhánh `PhungCao`. Link commit: 
+- Commit: `41f491f` trên nhánh `PhungCao`.
 - Ma trận student (`python -m pytest -q -m student -o addopts=`): 62/62 test của shape single xanh, gồm T01–T14 × 5 seed, T11 và T12.
 - `python -m pytest -q tests/test_single_approval.py`: 12 passed.
 - Cổng host `python -m pytest -q` (sau khi gộp code cả nhóm và sửa review): 167 passed, không còn xfail.
@@ -55,7 +55,7 @@ Vai **B — Single agent + Policy**:
 ## 5. Công cụ AI đã dùng
 
 - Công cụ: Claude Code (Anthropic).
-- Dùng vào việc: Hỗ trợ và check `single.py` và `test_single_approval.py.
+- Dùng vào việc: Hỗ trợ và check `single.py` và `test_single_approval.py`.
 - Cách tự kiểm tra: Đọc lại từng dòng code, tự chạy lại `pytest` và so với kết quả mong đợi trong CHECKPOINTS.md.
 
 ## 6. Tự đánh giá
