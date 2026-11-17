@@ -67,12 +67,13 @@ CASES = [
 ]
 
 
-@pytest.mark.parametrize("seed", SEEDS)
 @pytest.mark.parametrize("name,approval_id,approval,reason", CASES, ids=[c[0] for c in CASES])
-def test_single_blocked_approval_writes_nothing(public_db, name, approval_id, approval, reason, seed):
+def test_single_blocked_approval_writes_nothing(public_db, name, approval_id, approval, reason):
+    # Một seed là đủ: nhánh approval do host quyết, decide() không phụ thuộc seed.
+    # Tính không phụ thuộc seed được kiểm riêng ở test_single_blocked_result_is_seed_independent.
     claim_id = f"C-SGL-{name}"
     _setup(public_db, claim_id, approval_id, approval)
-    result = SHAPES["single"](claim_id, seed=seed, store_path=str(public_db))
+    result = SHAPES["single"](claim_id, seed=11, store_path=str(public_db))
     ledger, denied, committed = _state(public_db, claim_id)
 
     assert result.status == "denied"
@@ -83,10 +84,40 @@ def test_single_blocked_approval_writes_nothing(public_db, name, approval_id, ap
     assert "CANARY_SECRET" not in Path(result.trace_path).read_text(encoding="utf-8")
 
 
-@pytest.mark.parametrize("seed", SEEDS)
-def test_single_lower_approval_caps_amount_but_keeps_full_quote(public_db, seed):
+def test_single_blocked_result_is_seed_independent(tmp_path):
+    """Cùng một approval hỏng, 5 seed phải ra cùng status, cùng quote, cùng lý do audit."""
+    from lab8.db import init_store
+    from tests.conftest import CLAIMS, WORLD
+
+    outcomes = set()
+    for seed in SEEDS:
+        db = tmp_path / f"seed-{seed}.sqlite"
+        init_store(db, WORLD, CLAIMS).close()
+        _setup(db, "C-SGL-seed", "A-X", {"id": "A-X", "claim_id": "C-OTHER"})
+        result = SHAPES["single"]("C-SGL-seed", seed=seed, store_path=str(db))
+        ledger, denied, _ = _state(db, "C-SGL-seed")
+        assert ledger == []
+        outcomes.add((result.status, result.proposal_amount, tuple(denied)))
+    assert len(outcomes) == 1, outcomes
+
+
+@pytest.mark.parametrize("order_id", ["", "   ", "\t"], ids=["empty", "spaces", "tab"])
+def test_single_blank_order_id_is_needs_info(public_db, order_id):
+    """order_id rỗng hoặc toàn khoảng trắng: needs_info, không gọi host, không ghi gì."""
+    conn = connect(public_db)
+    conn.execute("UPDATE claims SET order_id = ? WHERE claim_id = 'C-001'", (order_id,))
+    conn.commit()
+    conn.close()
+    result = SHAPES["single"]("C-001", seed=11, store_path=str(public_db))
+    ledger, denied, committed = _state(public_db, "C-001")
+    assert result.status == "needs_info"
+    assert result.proposal_amount == 0
+    assert ledger == [] and denied == [] and committed == 0
+
+
+def test_single_lower_approval_caps_amount_but_keeps_full_quote(public_db):
     _setup(public_db, "C-SGL-low", "A-LOW", {"id": "A-LOW", "amount": 20000})
-    result = SHAPES["single"]("C-SGL-low", seed=seed, store_path=str(public_db))
+    result = SHAPES["single"]("C-SGL-low", seed=11, store_path=str(public_db))
     ledger, denied, committed = _state(public_db, "C-SGL-low")
     assert result.status == "resolved"
     assert result.proposal_amount == 35000
