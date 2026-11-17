@@ -27,7 +27,7 @@ Gợi ý chia vai:
 
 | Người | Vai | Commit | Test đã thêm hoặc sửa |
 | --- | --- | --- | --- |
-| Vũ Quang Huy (2A202603782) | Workflow + integration | `1723d3e` (workflow), `f242fa4` (blank order ID fix) | `tests/test_public_matrix.py` — đã chạy các kiểm thử workflow; không thêm hoặc sửa file kiểm thử |
+| Vũ Quang Huy (2A202603782) | Workflow + integration | `1723d3e` (workflow), `f242fa4` (blank order ID fix) | `src/tests/test_workflow_whitespace_order_id.py` — kiểm tra ID chỉ có khoảng trắng trả về `needs_info` và không ghi refund |
 | | | | |
 | Nguyễn Minh Đức (2A202603751) | Orchestrator + Handoff | `cbe652f` feat(orchestrator): shape C, read-only investigators, sanitized handoff | `src/tests/test_orchestrator_handoff.py` (mới); ma trận student `-k orchestrator` 62/62 |
 
