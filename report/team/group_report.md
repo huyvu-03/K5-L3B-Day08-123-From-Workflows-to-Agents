@@ -188,7 +188,7 @@ Chi tiết đóng góp của từng thành viên nằm trong `TEAM.md` (bảng �
 | Vũ Quang Huy | Workflow + Integration | Triển khai Workflow, xử lý claim/order, quote, host refund và trường hợp `order_id` không hợp lệ | `src/lab8/shapes/workflow.py`; commit triển khai và test theo Git |
 | Phùng Văn Thanh Cao | Single Agent + Policy | Triển khai Single ReAct, kiểm soát tool đọc và kiểm thử approval | Commit `41f491f`; `src/tests/test_single_approval.py` |
 | Nguyễn Minh Đức | Orchestrator + Handoff | Triển khai Orchestrator, read-only investigator, handoff sanitize và crash/replay tests | Commit `cbe652f`; `src/tests/test_orchestrator_handoff.py` |
-| Đỗ Thị Thu Hằng | Ledger, Testing + Documentation | Cập nhật ADR, tham gia kiểm thử trace hygiene, T13/T14, conflict, replay và blank order ID | Commit `d8c21a0`, `20265e7`; `decision_adr.md` và các file test liên quan |
+| Đỗ Thị Thu Hằng | Ledger, Testing + Documentation | Cập nhật ADR, tham gia kiểm thử trace hygiene, T13/T14, conflict, replay và blank order ID | Commit `601e461`, `d43b825`, `20265e7`, `1b2f382`; `decision_adr.md` và các file test liên quan |
 
 **Lưu ý:** Commit triển khai Workflow của Huy cần đối chiếu trực tiếp với lịch sử Git để bổ sung hash chính xác nếu cần. Không sử dụng commit của thành viên khác để thay thế.
 
