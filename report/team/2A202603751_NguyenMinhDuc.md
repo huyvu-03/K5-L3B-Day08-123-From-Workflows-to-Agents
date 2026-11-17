@@ -4,7 +4,7 @@
 
 - Họ tên: Nguyễn Minh Đức
 - MSSV: 2A202603751
-- Email:
+- Email: nmduc7904@gmail.com
 - GitHub: Minhduc7904
 
 ## 2. Phần việc phụ trách

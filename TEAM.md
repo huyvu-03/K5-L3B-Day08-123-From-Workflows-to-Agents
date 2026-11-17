@@ -13,7 +13,7 @@
 | --: | ------ | ---- | ----- | ------ | ------- |
 |   1 |        |      |       |        |         |
 |   2 |        |      |       |        |         |
-|   3 | Nguyễn Minh Đức | 2A202603751 |       | Minhduc7904 | Orchestrator + Handoff (P3) |
+|   3 | Nguyễn Minh Đức | 2A202603751 | nmduc7904@gmail.com | Minhduc7904 | Orchestrator + Handoff (P3) |
 
 Gợi ý chia vai:
 
