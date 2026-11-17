@@ -67,7 +67,7 @@ def _run(conn: sqlite3.Connection, claim_id: str, *, seed: int, crash_at: str | 
         return done("failed", 0, "unknown_claim")
 
     # 2. Thiếu order_id -> needs_info. Không lấy mã đơn từ chữ trong ticket.
-    if not claim["order_id"]:
+    if not (claim["order_id"] or "").strip():
         complete(budget, seed=seed, purpose="draft", prompt="needs_info")
         trace.add("decision", {"status": "needs_info"})
         return done("needs_info", 0, "missing_order_id")
@@ -79,6 +79,9 @@ def _run(conn: sqlite3.Connection, claim_id: str, *, seed: int, crash_at: str | 
     state: dict = {"quote": None}
 
     def decide(obs: dict) -> dict:
+        # decide() là kịch bản cố định trong code (lookup_order -> compute_compensation
+        # -> lookup_refund_history), không phải model tự chọn tool. MockLLM chỉ được gọi
+        # để tính chi phí mô phỏng; kết quả của nó không ảnh hưởng tới tool hay số tiền.
         complete(budget, seed=seed, purpose="react", prompt=f"step:{obs.get('last_tool') or 'start'}")
         last = obs.get("last_tool")
         if last is None:

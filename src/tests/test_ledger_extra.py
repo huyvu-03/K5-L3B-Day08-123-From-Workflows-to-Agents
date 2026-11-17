@@ -123,15 +123,10 @@ def test_replay_different_seed_keeps_one_row_and_one_audit(tmp_path, shape):
 
 # --- 3. Cross-shape consistency ----------------------------------------------------------------
 
-@pytest.mark.xfail(
-    reason="workflow/single chua strip order_id trong; cho P1/P2 sua",
-    strict=True,
-)
 def test_blank_order_id_gets_same_status_on_all_team_shapes(tmp_path):
     """A whitespace-only order_id must not produce different answers per shape.
 
-    orchestrator strips it (needs_info); workflow/single test `not order_id`.
-    When P1/P2 fix their shapes, remove the xfail marker above.
+    All three team shapes strip order_id and answer needs_info.
     """
     statuses = {}
     for shape in TEAM_SHAPES:
