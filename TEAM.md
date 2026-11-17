@@ -34,6 +34,6 @@
 
 - Benchmark: `src/reports/benchmark.json`, 4 shape × 14 claim × 5 seed. Workflow, single, orchestrator đều pass 1.000, pass^5 1.000; swarm pass 0.986, pass^5 0.929.
 - Crash safety: `src/reports/crash.json`, 20/20.
-- Test cổng host `python -m pytest -q`: [điền kết quả sau khi chạy lại trên main].
-- Ma trận student `python -m pytest -q -m student -o addopts=`: [điền kết quả sau khi chạy lại trên main].
-- `python -m lab8.check_submission`: [điền kết quả sau khi chạy lại trên main].
+- Test cổng host `python -m pytest -q` (từ `src/`): 167 passed, 248 deselected.
+- Ma trận student `python -m pytest -q -m student -o addopts=` (từ `src/`): 248 passed, 167 deselected.
+- `python -m lab8.check_submission` (từ `src/`): 0 FAIL, 0 WARN (shape 3/3 OK, benchmark 4×14×5 OK, crash 20/20 OK, docs OK).
