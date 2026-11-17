@@ -59,14 +59,15 @@ def run_claim(
             return finish(conn, shape="workflow", claim_id=claim_id, seed=seed,
                           status="failed", proposal_amount=0, budget=budget,
                           trace=trace, error_reason="unknown_claim")
-        if not claim.get("order_id"):
+        order_id = claim.get("order_id") or ""
+        if not order_id.strip():
             trace.add("decision", {"status": "needs_info"})
             return finish(conn, shape="workflow", claim_id=claim_id, seed=seed,
                           status="needs_info", proposal_amount=0, budget=budget,
                           trace=trace, error_reason="missing_order_id")
 
         budget.add_tool(tool_cost())
-        found = lookup_order(conn, claim["order_id"], claim["principal_id"])
+        found = lookup_order(conn, order_id, claim["principal_id"])
         trace.add("lookup_order", {"visible": found["visible"], "reason": found["reason"]})
         if not found["visible"]:
             return finish(conn, shape="workflow", claim_id=claim_id, seed=seed,
