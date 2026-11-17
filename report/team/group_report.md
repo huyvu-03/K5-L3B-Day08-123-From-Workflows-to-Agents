@@ -1,4 +1,3 @@
-
 # Báo cáo nhóm — Lab 8 
 
 Tối đa 5 trang ngoài phụ lục. Số liệu lấy từ file trong `src/reports/`, không chép tay từ terminal.
@@ -23,7 +22,7 @@ Bài toán LogiX-VN yêu cầu hệ thống xử lý claim dựa trên dữ li�
 Nhóm tập trung vào ba shape tự triển khai:
 
 - **Workflow:** Quy trình xử lý cố định bằng Python.
-- **Single:** Một agent sử dụng vòng lặp ReAct để lựa chọn các công cụ đọc.
+- **Single:** Chạy kịch bản đọc cố định (`decide()` do code quy định) trong khung ReAct.
 - **Orchestrator:** Agent điều phối và giao nhiệm vụ cho investigator thông qua handoff có kiểm soát.
 
 Swarm được sử dụng làm shape đối chiếu trong public benchmark để đánh giá sự khác biệt về độ chính xác, số bước và chi phí.
@@ -41,7 +40,7 @@ Nhóm chia công việc theo các phần triển khai và kiểm thử:
 
 Các shape được triển khai theo hướng có thể so sánh trên cùng bộ public benchmark. Trong quá trình thực hiện, nhóm đồng thời kiểm tra các yêu cầu chung về approval, refund quote, idempotency, trace hygiene và crash safety.
 
-Nhóm ưu tiên phân tách rõ trách nhiệm giữa model và code: model hỗ trợ lựa chọn công cụ hoặc tạo nội dung trả lời, còn các quyết định nghiệp vụ quan trọng như tính tiền, kiểm tra approval và ghi nhận refund được kiểm soát bởi code và host.
+Nhóm ưu tiên phân tách rõ trách nhiệm giữa model và code: model chỉ tạo nội dung trả lời và tính chi phí mô phỏng, còn các quyết định nghiệp vụ quan trọng như tính tiền, kiểm tra approval và ghi nhận refund được kiểm soát bởi code và host.
 
 ---
 
@@ -61,8 +60,6 @@ Nhóm ưu tiên phân tách rõ trách nhiệm giữa model và code: model hỗ
 **Mã nguồn:** `src/lab8/shapes/workflow.py`.
 
 ### 3.2 Shape B — single (ReAct)
-
-*Phần của thành viên B. Các mục 3.1 (workflow) và 3.3 (orchestrator) do A và C viết.*
 
 - **Luồng:** đọc claim bằng `get_claim_view`; `order_id` rỗng hoặc toàn khoảng trắng thì trả `needs_info`. Sau đó vòng ReAct (tối đa 8 bước) chạy tuần tự `lookup_order` → `compute_compensation` → `lookup_refund_history`, rồi trả quote. Một claim thường dùng 3 tool trong vòng lặp và 4 lần `decide`, thấp hơn trần 8.
 - **Ranh giới code / model:** `decide()` là kịch bản cố định trong code, không phải model tự chọn tool. MockLLM được gọi mỗi bước chỉ để tính chi phí mô phỏng và soạn câu trả lời; kết quả của nó không ảnh hưởng tới tool hay số tiền. Shape B vì vậy gần với workflow chạy trong khung ReAct. Số tiền do `compute_compensation` tính. Sau vòng lặp, code của shape gọi `durability.issue_refund`. Shape không tự trừ phần đã hoàn: nó truyền **quote đầy đủ** và để host trừ, nên T13 (đã hoàn đủ) và T14 (hoàn phần chênh) đúng.
@@ -173,7 +170,9 @@ Trong quá trình triển khai và kiểm thử, nhóm tập trung xử lý mộ
 | Retry có thể gây ghi nhận refund trùng lặp | Sử dụng cơ chế idempotency ở host và kiểm tra replay |
 | Crash xảy ra giữa effect và checkpoint | Truyền `crash_at`, không nuốt `InjectedCrash`, kiểm tra trace và khả năng resume |
 | Dữ liệu nhạy cảm có thể lọt vào trace hoặc handoff | Sử dụng allowlist, sanitize dữ liệu và bổ sung test kiểm tra secret, PII và ticket |
-| `order_id` bị thiếu hoặc chỉ chứa khoảng trắng | Kiểm tra đầu vào trước khi giao việc hoặc thực hiện refund; trả `needs_info` khi không hợp lệ |
+| `order_id` bị thiếu hoặc chỉ chứa khoảng trắng: test `blank order_id` (xfail) cho thấy workflow và single trả `escalated` còn orchestrator trả `needs_info` | Cắt khoảng trắng trước khi kiểm tra ở cả ba shape (`f242fa4`, `01e8c48`, `87bf9ca`), bỏ `xfail`; cả ba shape cùng trả `needs_info` và không ghi ledger |
+| Orchestrator có thể ném exception lạ ra ngoài `run_claim`, và mã đơn không tìm thấy (chữ do người dùng nhập) bị ghi vào trace | Bắt mọi lỗi bất ngờ và trả `failed` kèm trace sạch (`InjectedCrash` vẫn ném lại); trace chỉ ghi `visible` và `reason` (`01e8c48`) |
+| Tài liệu lỗi thời sau các sửa code (ADR còn mô tả test `xfail`, hash commit cũ) | Cập nhật lại ADR, `TEAM.md` và báo cáo cho khớp với `main` |
 
 Những vấn đề trên được xử lý thông qua việc kết hợp kiểm tra bằng code, kiểm soát tool, kiểm thử các nhánh nghiệp vụ và đối chiếu kết quả với business rules.
 
@@ -185,12 +184,10 @@ Chi tiết đóng góp của từng thành viên nằm trong `TEAM.md` (bảng �
 
 | Thành viên | Phần phụ trách | Đóng góp chính | Bằng chứng |
 |---|---|---|---|
-| Vũ Quang Huy | Workflow + Integration | Triển khai Workflow, xử lý claim/order, quote, host refund và trường hợp `order_id` không hợp lệ | `src/lab8/shapes/workflow.py`; commit triển khai và test theo Git |
-| Phùng Văn Thanh Cao | Single Agent + Policy | Triển khai Single ReAct, kiểm soát tool đọc và kiểm thử approval | Commit `41f491f`; `src/tests/test_single_approval.py` |
-| Nguyễn Minh Đức | Orchestrator + Handoff | Triển khai Orchestrator, read-only investigator, handoff sanitize và crash/replay tests | Commit `cbe652f`; `src/tests/test_orchestrator_handoff.py` |
-| Đỗ Thị Thu Hằng | Ledger, Testing + Documentation | Cập nhật ADR, tham gia kiểm thử trace hygiene, T13/T14, conflict, replay và blank order ID | Commit `601e461`, `d43b825`, `20265e7`, `1b2f382`; `decision_adr.md` và các file test liên quan |
-
-**Lưu ý:** Commit triển khai Workflow của Huy cần đối chiếu trực tiếp với lịch sử Git để bổ sung hash chính xác nếu cần. Không sử dụng commit của thành viên khác để thay thế.
+| Vũ Quang Huy | Workflow + Integration | Triển khai Workflow, xử lý claim/order, quote, host refund và trường hợp `order_id` không hợp lệ | `src/lab8/shapes/workflow.py`; commit `1723d3e`, `f242fa4`, `f2727a2`; `src/tests/test_workflow_whitespace_order_id.py` |
+| Phùng Văn Thanh Cao | Single Agent + Policy | Triển khai Single ReAct, kiểm soát tool đọc và kiểm thử approval | Commit `41f491f`, `87bf9ca` (PR #19); `src/tests/test_single_approval.py` |
+| Nguyễn Minh Đức | Orchestrator + Handoff | Triển khai Orchestrator, read-only investigator, handoff sanitize và crash/replay tests | Commit `cbe652f`, `01e8c48`, `c7364d3` (PR #17); `src/tests/test_orchestrator_handoff.py` |
+| Đỗ Thị Thu Hằng | Ledger, Testing + Documentation | Cập nhật ADR, tham gia kiểm thử trace hygiene, T13/T14, conflict, replay và blank order ID | Commit `601e461`, `d43b825`, `20265e7`, `1b2f382`; `decision_adr.md`; `src/tests/test_ledger_extra.py`; merge PR vào `dev`/`main` |
 
 ---
 
