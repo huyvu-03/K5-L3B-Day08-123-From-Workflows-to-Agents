@@ -1,11 +1,11 @@
 
-# Báo cáo nhóm — Lab 8 LogiX-VN
+# Báo cáo nhóm — Lab 8 
 
 Tối đa 5 trang ngoài phụ lục. Số liệu lấy từ file trong `src/reports/`, không chép tay từ terminal.
 
 ## 1. Thông tin nhóm
 
-- **Tên nhóm:** LogiX-VN
+- **Tên nhóm:** 123
 - **Thành viên:** Xem `TEAM.md`.
 - **Repository:** `K5-L3B-Day08-123-From-Workflows-to-Agents`
 - **Commit chốt (trùng `report/team/decision_adr.md`):** [Bổ sung commit hash cuối cùng trên nhánh nộp]
