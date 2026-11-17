@@ -23,8 +23,13 @@
 `python -m lab8.check_submission` đọc bảng này bằng máy: giữ nguyên tiêu đề `## Bảng đóng góp` và các cột. Mỗi người một dòng: commit có nội dung và ít nhất một test đã thêm hoặc sửa.
 
 | Người | Vai | Commit | Test đã thêm hoặc sửa |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Đỗ Thị Thu Hằng (2A202603840) | Ledger, Testing + Documentation | `20265e7` (test(ledger): trace hygiene, T13/T14, conflict, replay, blank order_id); `d8c21a0` (update decision_adr.md) | Các test liên quan đến trace hygiene, T13/T14, conflict, replay và blank order_id. Cần bổ sung chính xác tên file test đã sửa/thêm. |
-| Phùng Văn Thanh Cao | B: Single Agent + Policy | `41f491f` (single.py: ReAct, quote đầy đủ, crash_at; test approval) | `src/tests/test_single_approval.py` (36 test approval) |
-| Vũ Quang Huy (2A202603782) | Workflow + Integration | [Bổ sung commit hash] | [Bổ sung tên test đã thêm hoặc sửa] |
-| Nguyễn Minh Đức (2A202603751) | Orchestrator + Handoff | `cbe652f` (feat(orchestrator): shape C, read-only investigators, sanitized handoff) | `src/tests/test_orchestrator_handoff.py` (mới); ma trận student `-k orchestrator` (62/62) |
+| Vũ Quang Huy (2A202603782) | Workflow + integration | `1723d3e` (workflow), `f242fa4` (blank order ID fix) | `src/tests/test_workflow_whitespace_order_id.py` — kiểm tra ID chỉ có khoảng trắng trả về `needs_info` và không ghi refund |
+| Phùng Văn Thanh Cao | B: single agent + policy | `41f491f` (single.py: ReAct, quote đầy đủ, crash_at; test approval) | `src/tests/test_single_approval.py` (36 test approval) |
+| Nguyễn Minh Đức (2A202603751) | Orchestrator + Handoff | `cbe652f` feat(orchestrator): shape C, read-only investigators, sanitized handoff | `src/tests/test_orchestrator_handoff.py` (mới); ma trận student `-k orchestrator` 62/62 |
+
+
+### Bằng chứng
+
+-
